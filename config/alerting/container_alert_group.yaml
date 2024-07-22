@@ -1,0 +1,191 @@
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: Container Alert Group
+      folder: Container Alerts
+      interval: 2m
+      rules:
+        - uid: a58fc37b-8313-4e89-8b79-27f8cb333a1c
+          title: Container CPU Usage Alert
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: prometheus
+              model:
+                editorMode: code
+                expr: rate(container_cpu_usage_seconds_total{instance!='',name!=''}[$__rate_interval]) * 100
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 50
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: Alerting
+          execErrState: Error
+          for: 2m
+          annotations:
+            resource: '{{ index $labels "container_label_com_docker_compose_service"  }}  container'
+            summary: The container {{ index $labels "container_label_com_docker_compose_service"  }} has exceeded 50% CPU usage for the last 5 minutes and consumes {{ index $values "A" }}%
+          labels:
+            severity: |
+              {{ if (gt $$values.A.Value 150.0) -}} critical 
+              {{ else if (gt $$values.A.Value 100.0) -}} high 
+              {{ else if (gt $$values.A.Value 50.0) -}} medium 
+              {{ else if (gt $$values.A.Value 25.0) -}} low 
+              {{ else -}} normal 
+              {{- end }}
+          isPaused: false
+        - uid: ffa0e4da-4123-48a7-ad1c-c1c77e387775
+          title: Container Memory Usage Alert except OpenMRS
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: prometheus
+              model:
+                editorMode: code
+                expr: container_memory_rss{instance!='',name!='',container_label_com_docker_compose_service!='openmrs'} / 1024 / 1024
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 1024
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: Alerting
+          execErrState: Error
+          for: 2m
+          annotations:
+            resource: '{{ index $labels "container_label_com_docker_compose_service" }} container'
+            summary: The container {{ index $labels "container_label_com_docker_compose_service" }} has exceeded 1024 MB memory usage and consumes {{ index $values "A" }} MB
+          labels:
+            severity: |
+              {{ if (gt $$values.A.Value 2048.0) -}} critical 
+              {{ else if (gt $$values.A.Value 1536.0) -}} high 
+              {{ else if (gt $$values.A.Value 1024.0) -}} medium 
+              {{ else if (gt $$values.A.Value 768.0) -}} low 
+              {{ else -}} normal 
+              {{- end }}
+          isPaused: false
+
+        - uid: ba719325-4d48-46c2-a417-32d2126bf831
+          title: OpenMRS Container Memory Usage Alert
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: prometheus
+              model:
+                editorMode: code
+                expr: container_memory_rss{instance!='',name!='',container_label_com_docker_compose_service='openmrs'} / 1024 / 1024
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 3000
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: Alerting
+          execErrState: Error
+          for: 2m
+          annotations:
+            resource: '{{ index $labels "container_label_com_docker_compose_service" }} container'
+            summary: The container {{ index $labels "container_label_com_docker_compose_service" }} has exceeded 3000 MB memory usage and consumes {{ index $values "A" }} MB
+          labels:
+            severity: |
+              {{ if (gt $$values.A.Value 5000.0) -}} critical 
+              {{ else if (gt $$values.A.Value 4000.0) -}} high 
+              {{ else if (gt $$values.A.Value 3500.0) -}} medium 
+              {{ else if (gt $$values.A.Value 3000.0) -}} low 
+              {{ else -}} normal 
+              {{- end }}
+          isPaused: false

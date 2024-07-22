@@ -1,0 +1,25 @@
+apiVersion: 1
+contactPoints:
+    - orgId: 1
+      name: Default Email
+      receivers:
+        - uid: default-email
+          type: email
+          settings:
+            addresses: ${DEFAULT_ALERT_MAIL_RECEIVER}
+            message: '{{ template "mail.content" . }}'
+            singleEmail: true
+            subject: '{{ template "mail.subject" . }}'
+          disableResolveMessage: false
+
+    - orgId: 1
+      name: Critical High Email
+      receivers:
+        - uid: critical-high-email
+          type: email
+          settings:
+            addresses: ${CRITICAL_ALERT_MAIL_RECEIVER}
+            message: '{{ template "mail.content" . }}'
+            singleEmail: true
+            subject: '{{ template "mail.subject" . }}'
+          disableResolveMessage: false

@@ -1,0 +1,190 @@
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: Node Alerts Group
+      folder: Node Alerts
+      interval: 2m
+      rules:
+        - uid: efe83c8d-5d51-483c-a6c5-a2b774b46d81
+          title: Node Memory Low Availability Alert
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: prometheus
+              model:
+                editorMode: code
+                expr: ((node_memory_MemFree_bytes + node_memory_Buffers_bytes + node_memory_Cached_bytes)/node_memory_MemTotal_bytes) * 100
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 30
+                        type: lt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: Alerting
+          execErrState: Error
+          for: 2m
+          annotations:
+            resource: Node - {{ index $labels "instance" }}
+            summary: 'The node {{ index $labels "instance" }} has low available memory less than 30%. Current availability: {{ index $values "A" }}%'
+          labels:
+            severity: |
+              {{ if (le $$values.A.Value 5.0) -}} critical 
+              {{ else if (lt $$values.A.Value 10.0) -}} high 
+              {{ else if (lt $$values.A.Value 20.0) -}} medium 
+              {{ else if (lt $$values.A.Value 30.0) -}} low 
+              {{ else -}} normal {{- end }}
+          isPaused: false
+        - uid: cacfdbd1-f705-4580-918f-ccb951ef03dd
+          title: Node High CPU Load Alert
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: prometheus
+              model:
+                editorMode: code
+                expr: avg_over_time(node_load5[$__rate_interval]) * 100 / on(instance) group_left sum by (instance)(irate(node_cpu_seconds_total[$__rate_interval]))
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 75
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: Alerting
+          execErrState: Error
+          for: 2m
+          annotations:
+            resource: Node - {{ index $labels "instance" }}
+            summary: |-
+                The node {{ index $labels "instance" }} has more CPU Usage above 75% . Current 5min average load: {{ index $values "A" }}
+                %
+          labels:
+            severity: |
+              {{ if (gt $$values.A.Value 95.0) -}} critical 
+              {{ else if (gt $$values.A.Value 90.0) -}} high 
+              {{ else if (gt $$values.A.Value 80.0) -}} medium 
+              {{ else if (gt $$values.A.Value 75.0) -}} low 
+              {{ else -}} normal {{- end }}
+          isPaused: false
+        - uid: ec043466-05a1-44ea-a196-c2c4bb73a302
+          title: Node Low Disk Space Alert
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: prometheus
+              model:
+                editorMode: code
+                expr: ((avg_over_time(node_filesystem_avail_bytes{mountpoint="/",fstype!="rootfs"}[$__rate_interval])) / avg_over_time(node_filesystem_size_bytes{mountpoint="/",fstype!="rootfs"}[$__rate_interval])) * 100
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 30
+                        type: lt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: Alerting
+          execErrState: Error
+          for: 2m
+          annotations:
+            resource: Node - {{ index $labels "instance" }}
+            summary: 'The node {{ index $labels "instance" }} has low available disk space in root volume less than 30%. Current availability: {{ index $values "A" }}%'
+          labels:
+            severity: |
+              {{ if (le $$values.A.Value 5.0) -}} critical 
+              {{ else if (lt $$values.A.Value 10.0) -}} high 
+              {{ else if (lt $$values.A.Value 20.0) -}} medium 
+              {{ else if (lt $$values.A.Value 30.0) -}} low 
+              {{ else -}} normal 
+              {{- end }}
+          isPaused: false

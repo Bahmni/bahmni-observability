@@ -1,0 +1,44 @@
+server {
+    listen 80 default_server;
+    server_name  "";
+    server_tokens off;
+
+    # Uncomment the below lines if you need to run with SSL
+    # listen 443 ssl ;
+    # ssl_certificate /etc/ssl/certs/cert.pem;
+    # ssl_certificate_key /etc/ssl/certs/key.pem;
+
+# Security Headers as recommended by OWASP Secure Headers Project
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Content-Security-Policy "upgrade-insecure-requests; block-all-mixed-content" always;
+    add_header Cross-Origin-Embedder-Policy "require-corp" always;
+    add_header Cross-Origin-Opener-Policy "same-origin" always;
+    add_header Cross-Origin-Resource-Policy "same-origin" always;
+    add_header Referrer-Policy "same-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000 ; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Permitted-Cross-Domain-Policies "none" always;
+
+# Proxy Grafana connections.
+  location / {
+    proxy_set_header Host $http_host;
+    proxy_pass http://grafana:3000;
+  }
+
+# Proxy Grafana Live WebSocket connections.
+  location /api/live/ {
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_set_header Host $http_host;
+    proxy_pass http://grafana:3000;
+  }
+
+  location ~ /(api/datasources/proxy/uid/loki/loki/api/v1/tail) {
+      proxy_pass          http://grafana:3000$request_uri;
+      proxy_set_header    Host              $http_host;
+      proxy_set_header    Connection        "Upgrade";
+      proxy_set_header    Upgrade           $http_upgrade;
+  }
+}
