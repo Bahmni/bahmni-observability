@@ -13,36 +13,17 @@ x-loki-logging: &loki
 
 x-log-config: &log-config
   # update this value to *loki if needed to see logs in grafana dashboard.
-  <<: *loki
-
+  <<: *default
 
 services:
-  monitoring-proxy:
-    container_name: monitoring-proxy
-    profiles: ["monitoring"]
-    image: nginx:${NGINX_IMAGE_TAG:?}
-    ports:
-      - "81:80"
-#      - "445:443"
-    environment:
-      TZ: ${TZ:?}
-    restart: unless-stopped
-    logging: *log-config
-    volumes:
-      - "./config/default.conf.template:/etc/nginx/templates/default.conf.template"
-      - "./config/nginx.conf:/etc/nginx/nginx.conf"
-      - "${CERTIFICATE_PATH}:/etc/ssl/certs/"
-
   prometheus:
     image: prom/prometheus
     profiles: ["monitoring"]
     container_name: prometheus
-    restart: unless-stopped
+    restart: ${RESTART_POLICY}
     logging: *log-config
     environment:
       TZ: ${TZ:?}
-    ports:
-      - '9090:9090'
     command:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
@@ -53,12 +34,12 @@ services:
     image: grafana/grafana:${GRAFANA_IMAGE_TAG:?}
     profiles: ["monitoring"]
     container_name: grafana
-    restart: unless-stopped
+    restart: ${RESTART_POLICY}
     logging: *log-config
     environment:
       TZ: ${TZ:?}
-      GF_SMTP_ENABLED: true
       GF_USERS_VIEWERS_CAN_EDIT: true
+      GF_SMTP_ENABLED: true
       GF_SMTP_HOST: smtp.gmail.com:587
       GF_SMTP_USER: ${GMAIL_USERNAME}
       GF_SMTP_PASSWORD: ${GMAIL_PASSWORD}
@@ -78,7 +59,7 @@ services:
     image: grafana/loki:${LOKI_IMAGE_TAG:?}
     profiles: ["monitoring"]
     container_name: loki
-    restart: unless-stopped
+    restart: ${RESTART_POLICY}
     logging: *log-config
     environment:
       TZ: ${TZ:?}
@@ -92,7 +73,7 @@ services:
   blackbox-exporter:
     image: prom/blackbox-exporter:${BLACKBOX_EXPORTER_IMAGE_TAG:?}
     container_name: blackbox-exporter
-    restart: unless-stopped
+    restart: ${RESTART_POLICY}
     profiles: ["monitoring"]
     logging: *log-config
     command:
@@ -103,7 +84,7 @@ services:
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:${CADVISOR_IMAGE_TAG:?}
     container_name: cadvisor
-    restart: unless-stopped
+    restart: ${RESTART_POLICY}
     profiles: ["monitoring-metrics"]
     logging: *log-config
     command:
@@ -120,7 +101,7 @@ services:
   node-exporter:
     image: prom/node-exporter:${NODE_EXPORTER_IMAGE_TAG:?}
     container_name: node-exporter
-    restart: unless-stopped
+    restart: ${RESTART_POLICY}
     profiles: ["monitoring-metrics"]
     logging: *log-config
     ports:
