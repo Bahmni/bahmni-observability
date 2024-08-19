@@ -17,7 +17,7 @@ x-log-config: &log-config
 
 services:
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:${PROMETHEUS_IMAGE_TAG:?}
     profiles: ["monitoring"]
     container_name: prometheus
     restart: ${RESTART_POLICY}
