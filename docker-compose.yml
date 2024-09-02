@@ -1,0 +1,138 @@
+version: "3.8"
+
+x-default-logging: &default
+  {}
+
+x-loki-logging: &loki
+  driver: loki
+  options:
+    loki-url: ${LOKI_URL:?}
+    mode: non-blocking
+    max-buffer-size: 4m
+    loki-retries: "3"
+
+x-log-config: &log-config
+  # update this value to *loki if needed to see logs in grafana dashboard.
+  <<: *default
+
+services:
+
+  monitoring-proxy:
+    container_name: monitoring-proxy
+    profiles: ["monitoring","logging"]
+    image: nginx:${NGINX_IMAGE_TAG:?}
+    ports:
+      - "81:80"
+      #- "445:443"
+    environment:
+      TZ: ${TZ:?}
+    restart: unless-stopped
+    logging: *log-config
+    volumes:
+      - "./config/default.conf.template:/etc/nginx/templates/default.conf.template"
+      - "./config/nginx.conf:/etc/nginx/nginx.conf"
+      #- "${CERTIFICATE_PATH}:/etc/ssl/certs/"
+
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_IMAGE_TAG:?}
+    profiles: ["monitoring"]
+    container_name: prometheus
+    restart: ${RESTART_POLICY}
+    logging: *log-config
+    environment:
+      TZ: ${TZ:?}
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-storage:/prometheus
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_IMAGE_TAG:?}
+    profiles: ["monitoring","logging"]
+    container_name: grafana
+    restart: ${RESTART_POLICY}
+    logging: *log-config
+    environment:
+      TZ: ${TZ:?}
+      GF_USERS_VIEWERS_CAN_EDIT: true
+      GF_SMTP_ENABLED: true
+      GF_SMTP_HOST: ${SMTP_HOST}
+      GF_SMTP_USER: ${SMTP_USERNAME}
+      GF_SMTP_PASSWORD: ${SMTP_PASSWORD}
+      GF_SMTP_SKIP_VERIFY: false
+      GF_SMTP_FROM_NAME: ${SMTP_FROM_NAME}
+      GF_SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS}
+      DEFAULT_ALERT_MAIL_RECEIVER: ${DEFAULT_ALERT_MAIL_RECEIVER}
+      CRITICAL_ALERT_MAIL_RECEIVER: ${CRITICAL_ALERT_MAIL_RECEIVER}
+    volumes:
+      - ./config/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ./config/alerting:/etc/grafana/provisioning/alerting
+      - grafana-storage:/var/lib/grafana
+
+  loki:
+    image: grafana/loki:${LOKI_IMAGE_TAG:?}
+    profiles: ["monitoring","logging"]
+    container_name: loki
+    restart: ${RESTART_POLICY}
+    logging: *log-config
+    environment:
+      TZ: ${TZ:?}
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./config/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki:/loki
+  
+  blackbox-exporter:
+    image: prom/blackbox-exporter:${BLACKBOX_EXPORTER_IMAGE_TAG:?}
+    container_name: blackbox-exporter
+    restart: ${RESTART_POLICY}
+    profiles: ["monitoring"]
+    logging: *log-config
+    command:
+      - '--config.file=/etc/blackbox-exporter/config.yml'
+    volumes:
+      - ./config/blackbox-exporter.yml:/etc/blackbox-exporter/config.yml
+    
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:${CADVISOR_IMAGE_TAG:?}
+    container_name: cadvisor
+    restart: ${RESTART_POLICY}
+    profiles: ["monitoring-metrics"]
+    logging: *log-config
+    command:
+      - '-housekeeping_interval=10s'
+      - '-docker_only=true'
+    ports:
+      - "8100:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+  node-exporter:
+    image: prom/node-exporter:${NODE_EXPORTER_IMAGE_TAG:?}
+    container_name: node-exporter
+    restart: ${RESTART_POLICY}
+    profiles: ["monitoring-metrics"]
+    logging: *log-config
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+
+volumes:
+  grafana-storage:
+  loki:
+  prometheus-storage:
+

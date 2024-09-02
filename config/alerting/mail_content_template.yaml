@@ -1,0 +1,39 @@
+apiVersion: 1
+
+templates:
+  - orgID: 1
+    
+    name: mail.content
+
+    editable: true
+
+    template: |
+      {{ define "mail.content" }}
+      {{ if .Alerts.Firing }}
+        Firing alert(s):
+        {{ range .Alerts.Firing }}
+          {{"\t"}}🟥 {{ index .Labels "alertname" }}
+          {{- with index .Annotations "resource" }}
+            {{"\t"}}Resource: {{title . }}
+          {{- end }}
+          {{ with index .Labels "instance" -}}
+            {{"\t\t"}}Instance: {{ . }}
+          {{- end }}
+          {{ with index .Labels "severity" -}}
+            {{"\t\t"}}Severity: {{title . }}
+          {{- end }}
+          {{ with index .Annotations "summary" -}}
+            {{"\t\t"}}Summary: {{ . }}
+          {{- end }}
+        {{ end }}
+      {{ end }}
+      {{ if .Alerts.Resolved }}
+        Resolved alert(s):
+        {{ range .Alerts.Resolved -}}
+          🟩 {{ index .Labels "alertname" }} is resolved
+          {{- with index .Annotations "resource" -}}
+            ' on {{title . }}.
+          {{ end }}
+        {{ end -}}
+      {{ end }}
+      {{ end }}
